@@ -25,7 +25,7 @@ STRcreator simulates data in sequential, highly-optimized steps. Below is an exa
 Step 1: Simulate PCR Stutter (Biochemical Stage)
 Generate the amplicon pool with biologically realistic stutter noise. The parameters below enforce a strict geometric penalty to match empirical baseline mutation rates.
 
-Bash
+```Bash
 python pcr_stutter_simulator.py \
     -r hg38_chr19.fa \
     -g chr19_ground_truth.tsv \
@@ -37,3 +37,24 @@ python pcr_stutter_simulator.py \
     --pgeom 0.95 \
     -f 200 \
     -d 500
+```
+Step 2: Simulate Illumina Sequencing (Optical Stage)
+Fragment the generated amplicons and introduce optical sequencing errors to create paired-end FASTQ files.
+
+```Bash
+python illumina_sequencer.py \
+    -i STRcreator_amplicons.fa \
+    -o STRcreator_chr19_30x \
+    -c 30 \
+    -l 150 \
+    -e 0.001
+```
+
+Step 3: Downstream Alignment
+The resulting synthetic reads (STRcreator_chr19_30x_R1.fq and R2.fq) are ready for standard alignment pipelines:
+
+```Bash
+bwa mem -t 8 hg38_chr19.fa STRcreator_chr19_30x_R1.fq STRcreator_chr19_30x_R2.fq | \
+samtools view -Sb - | samtools sort -@ 8 -o STRcreator_chr19_30x.bam
+samtools index STRcreator_chr19_30x.bam
+```
